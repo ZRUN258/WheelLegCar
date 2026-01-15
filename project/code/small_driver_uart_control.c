@@ -1,5 +1,5 @@
 ﻿#include "small_driver_uart_control.h"
-#include "pid.h"
+//#include "pid.h"
 
 small_device_value_struct motor_value;      // 定义通讯参数结构体
 uint8 motor_init_ok = 0;

@@ -107,8 +107,9 @@
 
 //=================================================code里面自己加的===================================================
 #include "small_driver_uart_control.h"
-#include "pid.h"
-//#include "balance.h"
+//#include "pid.h"
 #include "posture_control.h"
+//=================================================code里面自己加的===================================================
+#include "test_zrun.h"
 #endif
 

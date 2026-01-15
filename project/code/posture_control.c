@@ -1,34 +1,40 @@
 #include "posture_control.h"
 
 uint32 system_count = 0;//系统计数器
-cascade_common_value_struct my_cascade_common_value;
 bool run_flag = true;
-static pid_cycle_struct angle_speed_cycle = {//角速度闭环控制结构体初始化
-    .kp = 1.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .i_value = 0.0f,
-    .i_value_max = 0.0f,
-    .out = 0.0f,
-    .p_value_last = 0.0f
-};
-static pid_cycle_struct my_angle_cycle = {//角度闭环控制结构体初始化
-    .kp = 10.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .i_value = 0.0f,
-    .i_value_max = 0.0f,
-    .out = 0.0f,
-    .p_value_last = 0.0f
-};
+cascade_value_struct cascade_value;
+
+//******串级控制器初始化 */
+void cascade_init(void){
+    //一阶互补滤波
+    cascade_value.cascade_common_value.gyro_raw_data_l = &imu660ra_gyro_x;
+    cascade_value.cascade_common_value.acc_raw_data_l = &imu660ra_acc_y;
+    cascade_value.cascade_common_value.gyro_ration = -4;   // 角速度置信度
+    cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
+    cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
+    cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
+    cascade_value.cascade_common_value.mechanical_offset = 1200; //机械偏置:小车在-800左右为平衡点
+
+    //角速度闭环控制结构体
+    cascade_value.angular_speed_cycle.kp = 1.0f;
+    cascade_value.angular_speed_cycle.ki = 0.0f;
+    cascade_value.angular_speed_cycle.kd = 0.0f;
+
+    //角度闭环控制结构体
+    cascade_value.angle_cycle.kp = 10.0f;
+    cascade_value.angle_cycle.ki = 0.0f;
+    cascade_value.angle_cycle.kd = 0.0f;
+
+}
+
+//获取IMU数据,并初步处理
 void imu_data_get(void)
 {
-    // 获取IMU数据的函数实现
     imu660ra_get_acc();
     imu660ra_get_gyro();
     
-    imu660ra_gyro_x = imu660ra_gyro_x - 4;
-    imu660ra_gyro_y = imu660ra_gyro_y + 6;
+    imu660ra_gyro_x = imu660ra_gyro_x - 4;//陀螺仪x零偏校准
+    imu660ra_gyro_y = imu660ra_gyro_y + 6;//陀螺仪y零偏校准
     //imu660ra_gyro_z = imu660ra_gyro_z + 6;
 
     if(func_abs(imu660ra_gyro_x) <= 5)
@@ -45,17 +51,18 @@ void imu_data_get(void)
     }
 }
 
+//动态电机控制函数
 void dynamic_motor_control(void)
 {
     int16 left_motor_duty;
     int16 right_motor_duty;
     if(run_flag){
-        if(my_cascade_common_value.common_value > 2000 || my_cascade_common_value.common_value < -2000){
+        if(cascade_value.cascade_common_value.filtered_value > 2000 || cascade_value.cascade_common_value.filtered_value < -2000){
             small_driver_set_duty(0,0);
             run_flag = false;
         }
-        left_motor_duty = func_limit_ab(angle_speed_cycle.out, -10000, 10000);
-        right_motor_duty = func_limit_ab(angle_speed_cycle.out, -10000, 10000);
+        left_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
+        right_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
         small_driver_set_duty(left_motor_duty,right_motor_duty);
     }
     else{
@@ -63,42 +70,29 @@ void dynamic_motor_control(void)
     }      
 }
 
+//1ms中断回调函数:pit_ch10
 void pit_isr_callback(void)
 {
     // PIT中断回调函数的实现
     system_count++;
     imu_data_get();
-    if(system_count % 5 ==0){
-        //first_order_complementary_filter
-        first_order_complementary_filter(&my_cascade_common_value,*(my_cascade_common_value.gyro_raw_data_l),*(my_cascade_common_value.acc_raw_data_l));
-        pid_control_pd(&my_angle_cycle,0.0f,my_cascade_common_value.common_value);
+    if(system_count % 5 ==0){//每5ms执行一次互补滤波和角度pid
+        first_order_complementary_filter(&cascade_value.cascade_common_value,*(cascade_value.cascade_common_value.gyro_raw_data_l),*(cascade_value.cascade_common_value.acc_raw_data_l));
+        pid_control_pd(&cascade_value.angle_cycle,0.0f,cascade_value.cascade_common_value.filtered_value);
     }
-    pid_control_pd(&angle_speed_cycle,-my_angle_cycle.out,*(my_cascade_common_value.gyro_raw_data_l));
+    pid_control_pd(&cascade_value.angular_speed_cycle,(-cascade_value.angle_cycle.out),*(cascade_value.cascade_common_value.gyro_raw_data_l));
     dynamic_motor_control();
 }
 
 //*********一阶互补滤波*************
-
-void first_order_complementary_filter_init(void){
-    my_cascade_common_value.gyro_raw_data_l = &imu660ra_gyro_x;
-    my_cascade_common_value.acc_raw_data_l = &imu660ra_acc_y;
-    my_cascade_common_value.gyro_ration = -4;   // 角速度置信度
-    my_cascade_common_value.acc_ration = 4;    // 加速度置信度
-    my_cascade_common_value.common_value = 0;
-    my_cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    my_cascade_common_value.mechanical_offset = 1200; //机械偏置:小车在-800左右为平衡点
-}
-
-
 void first_order_complementary_filter(cascade_common_value_struct* filter,int16 gyro_raw_data,int16 acc_raw_data){
-    //一阶互补滤波算法实现
     float gyro_temp;
     float acc_temp;
 
     gyro_temp = gyro_raw_data * filter->gyro_ration; //角速度*角速度置信度
     acc_temp = (acc_raw_data-filter->temp_value) * filter->acc_ration;    //加速度*加速度置信度gyro
     filter->temp_value += ((gyro_temp + acc_temp) * filter->dt); //互补滤波计算
-    filter->common_value = filter->temp_value + filter->mechanical_offset; //加上机械偏置
+    filter->filtered_value = filter->temp_value + filter->mechanical_offset; //加上机械偏置
 }
 
 

@@ -1,4 +1,11 @@
-﻿#ifndef SMALL_DRIVER_UART_CONTROL_H_
+﻿/*
+    无刷电机驱动串口控制
+        -串口通讯初始化
+        -设置电机占空比
+        -获取电机速度信息
+
+*/
+#ifndef SMALL_DRIVER_UART_CONTROL_H_
 #define SMALL_DRIVER_UART_CONTROL_H_
 
 #include "zf_common_headfile.h"
