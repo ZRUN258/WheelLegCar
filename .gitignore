@@ -1,0 +1,35 @@
+# IAR 临时文件和构建输出
+
+# 构建目录
+program/nor_sdram_zf_dtcm/
+Debug/
+Debug_m0_plus/
+Debug_m7_0/
+Debug_m7_1/
+
+# 设置目录
+settings/
+settings_m0/
+settings_m7_0/
+settings_m7_1/
+project_config/settings/
+
+# IAR 临时文件
+*.crun
+*.dbgdt
+*.ps1
+*.xcl
+*.reggroups
+
+# 其他常见的 IAR 临时文件
+*.dep
+*.ewt
+*.dni
+*.wsdt
+*.pbxbtree
+*.pbd
+*.pbi
+*.wspos
+*.tmp
+*.bak
+*.log
