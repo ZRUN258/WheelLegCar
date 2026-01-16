@@ -19,7 +19,14 @@
 
 float servo_motor_duty = 90.0;                                                  // 舵机动作角度
 float servo_motor_dir = 1;                                                      // 舵机动作状态
-
+void zrun_test_motor_read_speed(void){
+    motor_control_init();               // 电机控制初始化
+    while(true){
+        small_driver_get_speed();   //右轮的Speed是负的
+        printf("left_speed:%d,right_speed:%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
+        system_delay_ms(500);
+    }
+}
 void zrun_test_controler(void){
     led_init();
     cascade_init();
@@ -76,13 +83,20 @@ void zrun_test_servo(void){
     }
 }
 void zrun_test_led(void){
-  led_init();
-  while(true){
-    led(on);
-    system_delay_ms(1000);
-    led(off);
-    system_delay_ms(1000);
-}
+    led_init();
+    button_init();
+    while(true){
+        if(button_press(bt1)){
+            led(on);
+        }
+        else if(button_press(bt2)){
+            led(off);
+        }
+        else if(button_press(bt3)){
+            led(toggle);
+        }
+        system_delay_ms(100);
+    }
 }
 void zrun_test_balance(void)
 {
@@ -91,6 +105,7 @@ void zrun_test_balance(void)
     button_init();
     motor_control_init();               // 电机控制初始化
     cascade_init();                     // 滤波链初始化
+    serial_optimizer_init();           // 串口初始化
 
     while(1)
     {
@@ -115,7 +130,7 @@ void zrun_test_balance(void)
             run_flag = false;
             printf("bt2\r\n");
         }       
-        system_delay_ms(10); 
+        system_delay_ms(100); 
 
     }
 }

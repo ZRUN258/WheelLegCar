@@ -43,6 +43,7 @@ typedef struct{
 extern uint32 system_count;//系统计数器
 extern cascade_value_struct cascade_value;
 extern bool run_flag;
+extern int16 car_speed;
 
 void imu_data_get(void);
 void pit_isr_callback(void);

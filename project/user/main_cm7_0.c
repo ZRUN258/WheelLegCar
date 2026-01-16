@@ -21,7 +21,8 @@ int main(void){
     //测试函数
     //zrun_test_led();
     //zrun_test_servo();
-    zrun_test_controler();
-    //zrun_test_balance();
+    //zrun_test_controler();
+    zrun_test_balance();
+    //zrun_test_motor_read_speed();
     return 0;
 }

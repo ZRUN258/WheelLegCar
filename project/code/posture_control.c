@@ -1,8 +1,9 @@
 #include "posture_control.h"
 
 uint32 system_count = 0;//系统计数器
-bool run_flag = true;
+bool run_flag = false;
 cascade_value_struct cascade_value;
+int16 car_speed = 0;
 
 //******串级控制器初始化 */
 void cascade_init(void){
@@ -13,7 +14,7 @@ void cascade_init(void){
     cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
     cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
     cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    cascade_value.cascade_common_value.mechanical_offset = 1200; //机械偏置:小车在-800左右为平衡点
+    cascade_value.cascade_common_value.mechanical_offset = 665; //机械偏置:小车在-800左右为平衡点
 
     //角速度闭环控制结构体
     cascade_value.angular_speed_cycle.kp = 1.0f;
@@ -24,6 +25,11 @@ void cascade_init(void){
     cascade_value.angle_cycle.kp = 10.0f;
     cascade_value.angle_cycle.ki = 0.0f;
     cascade_value.angle_cycle.kd = 0.0f;
+
+    //速度闭环控制结构体
+    cascade_value.speed_cycle.kp = 10.0f;
+    cascade_value.speed_cycle.ki = 0.0f;
+    cascade_value.speed_cycle.kd = 0.0f;
 
 }
 
@@ -76,9 +82,17 @@ void pit_isr_callback(void)
     // PIT中断回调函数的实现
     system_count++;
     imu_data_get();
+
+    if(system_count % 20 ==0){
+        small_driver_get_speed();
+        car_speed = (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data)/2;
+        pid_control_pd(&cascade_value.speed_cycle,0.0f,car_speed);
+    }
+
+
     if(system_count % 5 ==0){//每5ms执行一次互补滤波和角度pid
         first_order_complementary_filter(&cascade_value.cascade_common_value,*(cascade_value.cascade_common_value.gyro_raw_data_l),*(cascade_value.cascade_common_value.acc_raw_data_l));
-        pid_control_pd(&cascade_value.angle_cycle,0.0f,cascade_value.cascade_common_value.filtered_value);
+        pid_control_pd(&cascade_value.angle_cycle,-cascade_value.speed_cycle.out,cascade_value.cascade_common_value.filtered_value);
     }
     pid_control_pd(&cascade_value.angular_speed_cycle,(-cascade_value.angle_cycle.out),*(cascade_value.cascade_common_value.gyro_raw_data_l));
     dynamic_motor_control();

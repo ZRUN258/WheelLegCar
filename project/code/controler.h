@@ -1,3 +1,10 @@
+/*
+    控制器模块，包含按键、LED和无线串口调参功能
+    - 按键初始化与状态检测
+    - LED 初始化与控制
+    - 无线串口调参功能实现
+    ⚠️ 有依赖问题，不能将头文件加到 zf_common_headfile.h 中
+*/
 #ifndef CONTROLER_H_
 #define CONTROLER_H_
 
