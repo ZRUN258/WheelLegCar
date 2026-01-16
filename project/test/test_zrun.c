@@ -1,19 +1,86 @@
 #include "test_zrun.h"
+#include "controler.h"
 
 // **************************** 变量定义区域 ****************************
-#define KEY1                    (P20_0)
-#define KEY2                    (P20_1)
-#define KEY3                    (P20_2)
-#define KEY4                    (P20_3)
-#define LED1                    (P19_0)
+#define SERVO_MOTOR_PWM1            (TCPWM_CH13_P00_3)                          // 定义主板上舵机对应引脚
+#define SERVO_MOTOR_PWM2            (TCPWM_CH12_P01_0)                          // 定义主板上舵机对应引脚
+#define SERVO_MOTOR_PWM3            (TCPWM_CH11_P01_1)                          // 定义主板上舵机对应引脚
+#define SERVO_MOTOR_PWM4            (TCPWM_CH20_P08_1)                          // 主板上的有刷电机2引脚飞线
+#define SERVO_MOTOR_FREQ            (50 )                                       // 定义主板上舵机频率  请务必注意范围 50-300
 
+#define SERVO_MOTOR_L_MAX           (50 )                                       // 定义主板上舵机活动范围 角度
+#define SERVO_MOTOR_R_MAX           (150)                                       // 定义主板上舵机活动范围 角度
 
+#define SERVO_MOTOR_DUTY(x)         ((float)PWM_DUTY_MAX/(1000.0/(float)SERVO_MOTOR_FREQ)*(0.5+(float)(x)/90.0))
+
+#if (SERVO_MOTOR_FREQ<50 || SERVO_MOTOR_FREQ>300)
+    #error "SERVO_MOTOR_FREQ ERROE!"
+#endif
+
+float servo_motor_duty = 90.0;                                                  // 舵机动作角度
+float servo_motor_dir = 1;                                                      // 舵机动作状态
+
+void zrun_test_controler(void){
+    led_init();
+    cascade_init();
+    serial_optimizer_init(); //串口初始化
+    while(true){
+        printf("mechanical_offset:%d\r\n", cascade_value.cascade_common_value.mechanical_offset);
+        printf("angular_speed_cycle.kp:%f\r\n", cascade_value.angular_speed_cycle.kp);
+        printf("angular_speed_cycle.kd:%f\r\n", cascade_value.angular_speed_cycle.kd);
+        printf("angle_cycle.kp:%f\r\n", cascade_value.angle_cycle.kp);
+        printf("angle_cycle.kd:%f\r\n", cascade_value.angle_cycle.kd);
+        system_delay_ms(1000);
+    }
+}
+void zrun_test_servo(void){
+    button_init();
+    while(true){
+        if(button_press(bt1)){
+            break;
+        }
+        system_delay_ms(10);
+    }
+    //pwm_init(SERVO_MOTOR_PWM1, SERVO_MOTOR_FREQ, 300);
+    //pwm_init(SERVO_MOTOR_PWM2, SERVO_MOTOR_FREQ, 300);
+    pwm_init(SERVO_MOTOR_PWM4, SERVO_MOTOR_FREQ, 300);
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+        if(servo_motor_dir)
+        {
+            servo_motor_duty ++;
+            if(servo_motor_duty >= SERVO_MOTOR_R_MAX)
+            {
+                servo_motor_dir = 0x00;
+            }
+        }
+        else
+        {
+            servo_motor_duty --;
+            if(servo_motor_duty <= SERVO_MOTOR_L_MAX)
+            {
+                servo_motor_dir = 0x01;
+            }
+        }
+        
+        //pwm_set_duty(SERVO_MOTOR_PWM1, (uint16)SERVO_MOTOR_DUTY(servo_motor_duty));
+        //pwm_set_duty(SERVO_MOTOR_PWM2, (uint16)SERVO_MOTOR_DUTY(200-servo_motor_duty));
+        pwm_set_duty(SERVO_MOTOR_PWM4, (uint16)SERVO_MOTOR_DUTY(200-servo_motor_duty));
+        system_delay_ms(15);                                                   // 延时
+      
+      
+      
+        // 此处编写需要循环执行的代码a
+    }
+}
 void zrun_test_led(void){
-  gpio_init(LED1, GPO, GPIO_HIGH, GPO_PUSH_PULL);
+  led_init();
   while(true){
-    gpio_set_level(LED1,0);
+    led(on);
     system_delay_ms(1000);
-    gpio_set_level(LED1,1);
+    led(off);
     system_delay_ms(1000);
 }
 }
@@ -21,11 +88,7 @@ void zrun_test_balance(void)
 {
     //clock_init(SYSTEM_CLOCK_250M);                              // 时钟初始化
     //debug_init();                                               // debug 串口初始化
-    gpio_init(KEY1, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY1 输入 默认高电平 上拉输入
-    gpio_init(KEY2, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY2 输入 默认高电平 上拉输入
-    gpio_init(KEY3, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY3 输入 默认高电平 上拉输入
-    gpio_init(KEY4, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY4 输入 默认高电平 上拉输入
-    
+    button_init();
     motor_control_init();               // 电机控制初始化
     cascade_init();                     // 滤波链初始化
 
@@ -44,13 +107,13 @@ void zrun_test_balance(void)
     while(true){
         printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
         //printf("%d,%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
-        if(!gpio_get_level(KEY1)){
+        if(button_press(bt1)){
             run_flag = true;
-            printf("key1\r\n");
+            printf("bt1\r\n");
         }
-        else if(!gpio_get_level(KEY2)){
+        else if(button_press(bt2)){
             run_flag = false;
-            printf("key2\r\n");
+            printf("bt2\r\n");
         }       
         system_delay_ms(10); 
 

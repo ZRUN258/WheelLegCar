@@ -10,5 +10,6 @@
 
 void zrun_test_balance(void);
 void zrun_test_led(void);
-
+void zrun_test_servo(void);
+void zrun_test_controler(void);
 #endif

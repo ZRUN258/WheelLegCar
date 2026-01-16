@@ -35,7 +35,7 @@
 ********************************************************************************************************************/
 
 #include "zf_common_headfile.h"
-
+#include "controler.h"
 
 // **************************** PIT中断函数 ****************************
 void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数      
@@ -360,8 +360,9 @@ void uart1_isr (void)
     {
         Cy_SCB_ClearRxInterrupt(get_scb_module(UART_1), CY_SCB_UART_RX_NOT_EMPTY);              // 清除接收中断标志位
 
-        wireless_module_uart_handler();
-        
+        //wireless_module_uart_handler();
+        led(toggle);
+        serial_optimizer_callback(&cascade_value);
         
     }
     else if(Cy_SCB_GetTxInterruptMask(get_scb_module(UART_1)) & CY_SCB_UART_TX_DONE)            // 串口1发送中断
@@ -380,6 +381,8 @@ void uart2_isr (void)
         Cy_SCB_ClearRxInterrupt(get_scb_module(UART_2), CY_SCB_UART_RX_NOT_EMPTY);              // 清除接收中断标志位
 
         gnss_uart_callback();
+        //占用GPS串口用来接收蓝牙数据
+        
         
         
     }

@@ -1117,6 +1117,12 @@
     <group>
         <name>code</name>
         <file>
+            <name>$PROJ_DIR$\..\..\code\controler.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\controler.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\posture_control.c</name>
         </file>
         <file>
