@@ -42,6 +42,7 @@
 #include "zf_device_wifi_spi.h"
 #include "zf_device_ble6a20.h"
 #include "seekfree_assistant.h"
+#include "controler.h"
 
 #include "seekfree_assistant_interface.h"
 
@@ -121,7 +122,8 @@ ZF_WEAK void seekfree_assistant_interface_init (seekfree_assistant_transfer_devi
         case SEEKFREE_ASSISTANT_CUSTOM:
         {         
             // 根据自己的需求 自行实现seekfree_assistant_transfer与seekfree_assistant_receive函数，完成数据的收发
-            
+            seekfree_assistant_transfer_callback = wireless_spi_send_buffer;
+            seekfree_assistant_receive_callback = wireless_spi_read_buffer; 
         }break;
     }
 }

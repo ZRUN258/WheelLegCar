@@ -1,6 +1,7 @@
 #include "controler.h"
 #include "posture_control.h"
 #include <string.h>
+#include <stdarg.h>
 
 void button_init(void){
     gpio_init(BUTTON1, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY1 输入 默认高电平 上拉输入
@@ -93,6 +94,9 @@ void serial_optimizer_callback(cascade_value_struct* cascade_value_ptr){ //接�
                     case 0x05: // 通道5：角度闭环 kd
                         cascade_value_ptr->angle_cycle.kd = f;
                         break;
+                    case 0x06: // 通道6：速度闭环 kp
+                        cascade_value_ptr->speed_cycle.kp = f;
+                        break;
                     default:
                         // 其他通道暂不处理
                         break;
@@ -104,4 +108,35 @@ void serial_optimizer_callback(cascade_value_struct* cascade_value_ptr){ //接�
             memset(rx_buffer, 0, 8);
         }
     }
+}
+
+// 使用 OPTIMIZER_UART 无线串口打印信息
+void air_printf(const char* fmt, ...)
+{
+    static uint8 air_printf_buffer[256] = {0};  // 缓冲区用于存储格式化后的字符串
+    int32 str_length;
+    va_list arg;
+
+    // 解析可变参数列表
+    va_start(arg, fmt);
+    // 将格式化字符串写入缓冲区
+    str_length = vsnprintf((char *)air_printf_buffer, sizeof(air_printf_buffer) - 1, fmt, arg);
+    va_end(arg);
+
+    // 如果格式化成功，通过 UART 发送
+    if(str_length > 0)
+    {
+        uart_write_buffer(OPTIMIZER_UART, air_printf_buffer, (uint32)str_length);
+    }
+}
+
+void wireless_spi_init(void)
+{
+    spi_init(WIRELESS_SPI_INDEX, SPI_MODE0, WIRELESS_SPI_SPEED, WIRELESS_SPI_SCK_PIN, WIRELESS_SPI_MOSI_PIN, WIRELESS_SPI_MISO_PIN, WIRELESS_SPI_CS_PIN);//硬件SPI初始化
+}
+
+uint32 wireless_spi_send_buffer(const uint8 *buff, uint32 len)
+{
+    spi_write_8bit_array(WIRELESS_SPI_INDEX, buff, len);
+    return 0;
 }

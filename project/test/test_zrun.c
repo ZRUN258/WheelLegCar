@@ -19,6 +19,243 @@
 
 float servo_motor_duty = 90.0;                                                  // 舵机动作角度
 float servo_motor_dir = 1;                                                      // 舵机动作状态
+
+//****************摄像头参数设置*************/
+#define INCLUDE_BOUNDARY_TYPE   3
+// 边界的点数量远大于图像高度，便于保存回弯的情况
+#define BOUNDARY_NUM            (MT9V03X_H * 3 / 2)
+uint8 xy_x1_boundary[BOUNDARY_NUM], xy_x2_boundary[BOUNDARY_NUM], xy_x3_boundary[BOUNDARY_NUM];
+uint8 xy_y1_boundary[BOUNDARY_NUM], xy_y2_boundary[BOUNDARY_NUM], xy_y3_boundary[BOUNDARY_NUM];
+uint8 x1_boundary[MT9V03X_H], x2_boundary[MT9V03X_H], x3_boundary[MT9V03X_H];
+uint8 y1_boundary[MT9V03X_W], y2_boundary[MT9V03X_W], y3_boundary[MT9V03X_W];
+// 图像备份数组，在发送前将图像备份再进行发送，这样可以避免图像出现撕裂的问题
+uint8 image_copy[MT9V03X_H][MT9V03X_W];
+//**************************************/
+#define WIFI_SSID_TEST          "SeekFree"
+#define WIFI_PASSWORD_TEST      "SEEKFREE"
+#define UDP_TARGET_IP           "192.168.137.1"             // 连接目标的 IP
+#define UDP_TARGET_PORT         "8086"                      // 连接目标的端口
+#define WIFI__LOCAL_PORT        "6666"                      // 本机的端口 0：随机  可设置范围2048-65535  默认 6666
+
+uint8 wifi_spi_test_buffer[] = "this is wifi spi test buffer";
+uint8 wifi_spi_get_data_buffer[256];
+uint32 data_length = 0;
+
+
+void zrun_test_wifi(void)
+{
+
+
+
+    while(wifi_spi_init(WIFI_SSID_TEST, WIFI_PASSWORD_TEST))
+    {
+        printf("\r\n connect wifi failed. \r\n");
+        system_delay_ms(100);                                                   // 初始化失败 等待 100ms
+    }
+
+    printf("\r\n module version:%s",wifi_spi_version);                          // 模块固件版本
+    printf("\r\n module mac    :%s",wifi_spi_mac_addr);                         // 模块 MAC 信息
+    printf("\r\n module ip     :%s",wifi_spi_ip_addr_port);                     // 模块 IP 地址
+
+    // zf_device_wifi_spi.h 文件内的宏定义可以更改模块连接(建立) WIFI 之后，是否自动连接 TCP 服务器、创建 UDP 连接
+    if(0 == WIFI_SPI_AUTO_CONNECT)                                              // 如果没有开启自动连接 就需要手动连接目标 IP
+    {
+        while(wifi_spi_socket_connect(                                          // 向指定目标 IP 的端口建立 UDP 连接
+            "UDP",                                                              // 指定使用UDP方式通讯
+            UDP_TARGET_IP,                                                      // 指定远端的IP地址，填写上位机的IP地址
+            UDP_TARGET_PORT,                                                    // 指定远端的端口号，填写上位机的端口号，通常上位机默认是8080
+            WIFI__LOCAL_PORT))                                                  // 指定本机的端口号
+        {
+            // 如果一直建立失败 考虑一下是不是没有接硬件复位
+            printf("\r\n Connect UDP Servers error, try again.");
+            system_delay_ms(100);                                               // 建立连接失败 等待 100ms
+        }
+    }
+
+
+    // 发送测试数据至服务器
+    data_length = wifi_spi_send_buffer(wifi_spi_test_buffer, sizeof(wifi_spi_test_buffer));
+    wifi_spi_udp_send_now();
+    if(!data_length)
+    {
+        printf("\r\n send success.");
+    }
+    else
+    {
+        printf("\r\n %d bytes data send failed.", data_length);
+    }
+
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+        data_length = wifi_spi_read_buffer(wifi_spi_get_data_buffer, sizeof(wifi_spi_get_data_buffer));
+        if(data_length)                                                         // 如果接收到数据 则进行数据类型判断
+        {
+            printf("\r\n Get data: <%s>.", wifi_spi_get_data_buffer);
+            if(!wifi_spi_send_buffer(wifi_spi_get_data_buffer, data_length))
+            {
+                wifi_spi_udp_send_now();
+                printf("\r\n send success.");
+                memset(wifi_spi_get_data_buffer, 0, data_length);          // 数据发送完成 清空数据
+            }
+            else
+            {
+                printf("\r\n %d bytes data send failed.", data_length);
+            }
+        }
+        system_delay_ms(100);
+
+        // 此处编写需要循环执行的代码
+    }
+}
+
+
+void zrun_test_cam(void){
+    wireless_spi_init();
+    seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_CUSTOM);
+    led_init();
+#if(0 != INCLUDE_BOUNDARY_TYPE)
+    int32 i=0;
+#endif
+
+#if(3 <= INCLUDE_BOUNDARY_TYPE)
+    int32 j=0;
+#endif
+
+    // 此处编写用户代码 例如外设初始化代码等
+    while(1)
+    {
+        if(mt9v03x_init())
+            led(toggle);                                            // 翻转 LED 引脚输出电平 控制 LED 亮灭 初始化出错这个灯会闪的很慢
+        else
+            break;
+        system_delay_ms(500);                                                   // 闪灯表示异常
+    }
+
+#if(0 == INCLUDE_BOUNDARY_TYPE)
+    // 发送总钻风图像信息(仅包含原始图像信息)
+    seekfree_assistant_camera_information_config(SEEKFREE_ASSISTANT_MT9V03X, image_copy[0], MT9V03X_W, MT9V03X_H);
+
+#elif(1 == INCLUDE_BOUNDARY_TYPE)
+    // 发送总钻风图像信息(并且包含三条边界信息，边界信息只含有横轴坐标，纵轴坐标由图像高度得到，意味着每个边界在一行中只会有一个点)
+    // 对边界数组写入数据
+    for(i = 0; i < MT9V03X_H; i++)
+    {
+        x1_boundary[i] = 70 - (70 - 20) * i / MT9V03X_H;
+        x2_boundary[i] = MT9V03X_W / 2;
+        x3_boundary[i] = 118 + (168 - 118) * i / MT9V03X_H;
+    }
+    seekfree_assistant_camera_information_config(SEEKFREE_ASSISTANT_MT9V03X, image_copy[0], MT9V03X_W, MT9V03X_H);
+    seekfree_assistant_camera_boundary_config(X_BOUNDARY, MT9V03X_H, x1_boundary, x2_boundary, x3_boundary, NULL, NULL ,NULL);
+
+
+#elif(2 == INCLUDE_BOUNDARY_TYPE)
+    // 发送总钻风图像信息(并且包含三条边界信息，边界信息只含有纵轴坐标，横轴坐标由图像宽度得到，意味着每个边界在一列中只会有一个点)
+    // 通常很少有这样的使用需求
+    // 对边界数组写入数据
+    for(i = 0; i < MT9V03X_W; i++)
+    {
+        y1_boundary[i] = i * MT9V03X_H / MT9V03X_W;
+        y2_boundary[i] = MT9V03X_H / 2;
+        y3_boundary[i] = (MT9V03X_W - i) * MT9V03X_H / MT9V03X_W;
+    }
+    seekfree_assistant_camera_information_config(SEEKFREE_ASSISTANT_MT9V03X, image_copy[0], MT9V03X_W, MT9V03X_H);
+    seekfree_assistant_camera_boundary_config(Y_BOUNDARY, MT9V03X_W, NULL, NULL ,NULL, y1_boundary, y2_boundary, y3_boundary);
+
+
+#elif(3 == INCLUDE_BOUNDARY_TYPE)
+    // 发送总钻风图像信息(并且包含三条边界信息，边界信息含有横纵轴坐标)
+    // 这样的方式可以实现对于有回弯的边界显示
+    j = 0;
+    for(i = MT9V03X_H - 1; i >= MT9V03X_H / 2; i--)
+    {
+        // 直线部分
+        xy_x1_boundary[j] = 34;
+        xy_y1_boundary[j] = (uint8)i;
+
+        xy_x2_boundary[j] = 47;
+        xy_y2_boundary[j] = (uint8)i;
+
+        xy_x3_boundary[j] = 60;
+        xy_y3_boundary[j] = (uint8)i;
+        j++;
+    }
+
+    for(i = MT9V03X_H / 2 - 1; i >= 0; i--)
+    {
+        // 直线连接弯道部分
+        xy_x1_boundary[j] = 34 + (MT9V03X_H / 2 - i) * (MT9V03X_W / 2 - 34) / (MT9V03X_H / 2);
+        xy_y1_boundary[j] = (uint8)i;
+
+        xy_x2_boundary[j] = 47 + (MT9V03X_H / 2 - i) * (MT9V03X_W / 2 - 47) / (MT9V03X_H / 2);
+        xy_y2_boundary[j] = 15 + i * 3 / 4;
+
+        xy_x3_boundary[j] = 60 + (MT9V03X_H / 2 - i) * (MT9V03X_W / 2 - 60) / (MT9V03X_H / 2);
+        xy_y3_boundary[j] = 30 + i / 2;
+        j++;
+    }
+
+    for(i = 0; i < MT9V03X_H / 2; i++)
+    {
+        // 回弯部分
+        xy_x1_boundary[j] = MT9V03X_W / 2 + i * (138 - MT9V03X_W / 2) / (MT9V03X_H / 2);
+        xy_y1_boundary[j] = (uint8)i;
+
+        xy_x2_boundary[j] = MT9V03X_W / 2 + i * (133 - MT9V03X_W / 2) / (MT9V03X_H / 2);
+        xy_y2_boundary[j] = 15 + i * 3 / 4;
+
+        xy_x3_boundary[j] = MT9V03X_W / 2 + i * (128 - MT9V03X_W / 2) / (MT9V03X_H / 2);
+        xy_y3_boundary[j] = 30 + i / 2;
+        j++;
+    }
+    seekfree_assistant_camera_information_config(SEEKFREE_ASSISTANT_MT9V03X, image_copy[0], MT9V03X_W, MT9V03X_H);
+    seekfree_assistant_camera_boundary_config(XY_BOUNDARY, BOUNDARY_NUM, xy_x1_boundary, xy_x2_boundary, xy_x3_boundary, xy_y1_boundary, xy_y2_boundary, xy_y3_boundary);
+
+
+#elif(4 == INCLUDE_BOUNDARY_TYPE)
+    // 发送总钻风图像信息(并且包含三条边界信息，边界信息只含有横轴坐标，纵轴坐标由图像高度得到，意味着每个边界在一行中只会有一个点)
+    // 对边界数组写入数据
+    for(i = 0; i < MT9V03X_H; i++)
+    {
+        x1_boundary[i] = 70 - (70 - 20) * i / MT9V03X_H;
+        x2_boundary[i] = MT9V03X_W / 2;
+        x3_boundary[i] = 118 + (168 - 118) * i / MT9V03X_H;
+    }
+    seekfree_assistant_camera_information_config(SEEKFREE_ASSISTANT_MT9V03X, NULL, MT9V03X_W, MT9V03X_H);
+    seekfree_assistant_camera_boundary_config(X_BOUNDARY, MT9V03X_H, x1_boundary, x2_boundary, x3_boundary, NULL, NULL ,NULL);
+
+
+#endif
+    
+    
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+        if(mt9v03x_finish_flag)
+        {
+            mt9v03x_finish_flag = 0;
+
+            // 在发送前将图像备份再进行发送，这样可以避免图像出现撕裂的问题
+            memcpy(image_copy[0], mt9v03x_image[0], MT9V03X_IMAGE_SIZE);
+
+            // 发送图像
+            seekfree_assistant_camera_send();
+        }
+      
+      
+        // 此处编写需要循环执行的代码
+    }
+}
+void zrun_test_airprintf(void){
+    serial_optimizer_init(); //串口初始化
+    while(true){
+        air_printf("This is a test of air_printf function: %d, %f, %s\r\n", 12345, 3.14159, "Hello, World!");
+        system_delay_ms(1000);
+    }
+}
 void zrun_test_motor_read_speed(void){
     motor_control_init();               // 电机控制初始化
     while(true){

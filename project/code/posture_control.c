@@ -14,20 +14,20 @@ void cascade_init(void){
     cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
     cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
     cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    cascade_value.cascade_common_value.mechanical_offset = 665; //机械偏置:小车在-800左右为平衡点
+    cascade_value.cascade_common_value.mechanical_offset = 702; //机械偏置:小车在-800左右为平衡点
 
     //角速度闭环控制结构体
-    cascade_value.angular_speed_cycle.kp = 1.0f;
+    cascade_value.angular_speed_cycle.kp = 0.43f;
     cascade_value.angular_speed_cycle.ki = 0.0f;
     cascade_value.angular_speed_cycle.kd = 0.0f;
 
     //角度闭环控制结构体
-    cascade_value.angle_cycle.kp = 10.0f;
+    cascade_value.angle_cycle.kp = 10.4f;
     cascade_value.angle_cycle.ki = 0.0f;
     cascade_value.angle_cycle.kd = 0.0f;
 
     //速度闭环控制结构体
-    cascade_value.speed_cycle.kp = 10.0f;
+    cascade_value.speed_cycle.kp = 0.2f;
     cascade_value.speed_cycle.ki = 0.0f;
     cascade_value.speed_cycle.kd = 0.0f;
 

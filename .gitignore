@@ -33,3 +33,6 @@ project_config/settings/
 *.tmp
 *.bak
 *.log
+
+# MacOS 
+.DS_Store
