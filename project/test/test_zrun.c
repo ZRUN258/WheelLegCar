@@ -110,7 +110,6 @@ void zrun_test_wifi(void)
     }
 }
 
-
 void zrun_test_cam(void){
     wireless_spi_init();
     seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_CUSTOM);
@@ -249,6 +248,7 @@ void zrun_test_cam(void){
         // 此处编写需要循环执行的代码
     }
 }
+
 void zrun_test_airprintf(void){
     serial_optimizer_init(); //串口初始化
     while(true){
@@ -256,6 +256,7 @@ void zrun_test_airprintf(void){
         system_delay_ms(1000);
     }
 }
+
 void zrun_test_motor_read_speed(void){
     motor_control_init();               // 电机控制初始化
     while(true){
@@ -264,6 +265,7 @@ void zrun_test_motor_read_speed(void){
         system_delay_ms(500);
     }
 }
+
 void zrun_test_controler(void){
     led_init();
     cascade_init();
@@ -277,6 +279,7 @@ void zrun_test_controler(void){
         system_delay_ms(1000);
     }
 }
+
 void zrun_test_servo(void){
     button_init();
     while(true){
@@ -319,6 +322,7 @@ void zrun_test_servo(void){
         // 此处编写需要循环执行的代码a
     }
 }
+
 void zrun_test_led(void){
     led_init();
     button_init();
@@ -335,6 +339,7 @@ void zrun_test_led(void){
         system_delay_ms(100);
     }
 }
+
 void zrun_test_balance(void)
 {
     //clock_init(SYSTEM_CLOCK_250M);                              // 时钟初始化
