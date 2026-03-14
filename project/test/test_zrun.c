@@ -111,7 +111,6 @@ void zrun_test_wifi(void)
 }
 
 void zrun_test_cam(void){
-    wireless_spi_init();
     seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_CUSTOM);
     led_init();
 #if(0 != INCLUDE_BOUNDARY_TYPE)
@@ -253,6 +252,7 @@ void zrun_test_airprintf(void){
     serial_optimizer_init(); //串口初始化
     while(true){
         air_printf("This is a test of air_printf function: %d, %f, %s\r\n", 12345, 3.14159, "Hello, World!");
+        printf("This is a test of debug printf function: %d, %f, %s\r\n", 12345, 3.14159, "Hello, World!");
         system_delay_ms(1000);
     }
 }

@@ -129,14 +129,3 @@ void air_printf(const char* fmt, ...)
         uart_write_buffer(OPTIMIZER_UART, air_printf_buffer, (uint32)str_length);
     }
 }
-
-void wireless_spi_init(void)
-{
-    spi_init(WIRELESS_SPI_INDEX, SPI_MODE0, WIRELESS_SPI_SPEED, WIRELESS_SPI_SCK_PIN, WIRELESS_SPI_MOSI_PIN, WIRELESS_SPI_MISO_PIN, WIRELESS_SPI_CS_PIN);//硬件SPI初始化
-}
-
-uint32 wireless_spi_send_buffer(const uint8 *buff, uint32 len)
-{
-    spi_write_8bit_array(WIRELESS_SPI_INDEX, buff, len);
-    return 0;
-}
